@@ -1,218 +1,98 @@
-# 🚀 Agentic Readability AI (Vietnamese)
+# ⚡ Vietnamese Readability Agent Pro (VRAP)
 
-A **multi-agent AI system** for transforming Vietnamese text across readability levels (Tiểu học, THCS, THPT), powered by a **PhoBERT-based classifier** and an **iterative rewrite–validation loop**.
+A Multi-Agent System for Automated Vietnamese Readability Transformation.
 
----
-
-## 🧠 Overview
-
-This project builds an **agentic NLP pipeline** where multiple agents collaborate to:
-- Analyze text readability
-- Explain why a level is assigned
-- Rewrite text to a target level
-- Validate the result using a model
-- Iterate until convergence
-
-👉 The system enforces **semantic preservation**, meaning the rewritten text keeps the original meaning while changing only readability.
+VRAP is an advanced Agentic AI system designed to adapt the readability level of Vietnamese text. By leveraging a hybrid architecture of Large Language Models (Llama 3.1 via Groq) and specialized Deep Learning models (PhoBERT), it transforms text into three standard academic levels: Elementary (0.0), Junior High (1.0), and High School (2.0).
 
 ---
 
-## 🏗️ Architecture
+## 🚀 Key Features
 
-```
-Input Text
-   ↓
-🧩 Analyst (PhoBERT)
-   → Predict readability level
-   ↓
-🔍 Critic (LLM)
-   → Extract linguistic signals (lexical, syntax, semantic)
-   ↓
-✍️ Proposer (LLM)
-   → Rewrite text toward target level
-   ↓
-✅ Reviewer (PhoBERT)
-   → Validate readability level
-   ↓
-🔁 Loop until convergence
-```
+- Multi-Agent Architecture: Orchestrates specialized agents (Planner, Proposer, and Reviewer) to handle complex linguistic tasks.
+- Semantic Guardian: A strict planning constraint system that ensures the rewritten text preserves 100% of the original meaning and core entities.
+- Self-Correction Loop: An automated iterative engine that runs up to 20 iterations to satisfy the objective validation of the PhoBERT classifier.
+- Technical UI: A professional Streamlit-based dashboard featuring real-time token tracking and detailed execution "Trace Logs."
 
 ---
 
-## 🤖 Agents
+## 🛠️ System Architecture
 
-### 1. Analyst
-- Uses PhoBERT readability model
-- Outputs:
-  - `label` (0.0 / 1.0 / 2.0)
-  - `confidence`
-
-### 2. Critic
-- Explains why a readability level is assigned
-- Extracts signals:
-  - Lexical (word difficulty)
-  - Syntax (sentence complexity)
-  - Semantic (abstraction level)
-
-### 3. Proposer
-- Rewrites text based on:
-  - Current level
-  - Target level
-  - Critic signals
-- Enforces:
-  - ✅ Preserve meaning
-  - ❌ No entity change (AI ≠ trẻ em)
-  - ❌ No hallucination
-
-### 4. Reviewer
-- Uses PhoBERT to:
-  - Validate rewritten text
-  - Check if target level is reached
+The workflow follows a rigorous linguistic pipeline:
+1. Analyst Agent (PhoBERT): Provides the initial readability baseline.
+2. Critic Agent (Llama 3.1): Extracts linguistic evidence (lexical, syntax, semantic) justifying the current level.
+3. Planner Agent (Llama 3.1): The "Chief Editor" that creates a detailed blueprint, mapping vocabulary changes and structural adjustments while locking core entities.
+4. Proposer Agent (Llama 3.1): Executes the rewrite based on the Planner's instructions.
+5. Reviewer Agent (PhoBERT): Acts as an objective judge to validate if the target level has been reached.
 
 ---
 
-## 🔁 Loop Strategy
+## 📦 Installation & Setup
 
-- Dynamic direction:
-```python
-direction = target_level - current_level
-```
+### 1. Prerequisites
+- Python 3.10 or higher.
+- CUDA-enabled GPU (Optional, PhoBERT runs on CPU but GPU is recommended for speed).
 
-- Soft match condition:
-  - Accept if:
-    - Level difference ≤ 0.3
-    - Confidence > 0.6
+### 2. Install Dependencies
+Run the following command to install all required libraries:
 
-- Early stopping:
-  - No change in rewrite
-  - Max iterations reached
+bash
+pip install torch torchvision transformers langchain langchain-openai streamlit sentencepiece
 
----
 
-## ✨ Features
+### 3. API Configuration
+Open llm.py and insert your Groq API Key:
 
-- 🔄 Multi-agent iterative refinement  
-- 🧠 PhoBERT-based evaluation  
-- 🔒 Semantic-preserving rewriting  
-- ⚠️ Robust handling of invalid JSON from LLM  
-- 🧾 Full trace logging for debugging  
-- 🎯 Soft convergence instead of strict matching  
+python
+def get_llm():
+ return ChatOpenAI(
+ openai_api_key="YOUR_GROQ_API_KEY",
+ base_url="https://api.groq.com/openai/v1",
+ model="llama-3.1-8b-instant",
+ temperature=0.2
+ )
 
----
-
-## 📦 Model (PhoBERT)
-
-This project uses a fine-tuned PhoBERT model for readability classification:
-
-👉 https://huggingface.co/VMSR-Lab/phobert-readability-scale-with-small-range-dataset-classification
-
-### Labels:
-- `0.0` → Tiểu học  
-- `1.0` → THCS  
-- `2.0` → THPT  
 
 ---
 
-## ⚙️ Installation
+## 🖥️ How to Run
 
-```bash
-git clone https://github.com/your-username/agentic-readability-ai.git
-cd agentic-readability-ai
+### Web Interface (Recommended)
+Launch the professional dashboard using Streamlit:
 
-python -m venv venv
-venv\Scripts\activate  # Windows
+bash
+streamlit run app.py
 
-pip install -r requirements.txt
-```
+The application will be available at http://localhost:8501.
 
----
+### Command Line Interface (CLI)
+For quick testing via terminal:
 
-## ▶️ Usage
-
-```bash
+bash
 python main.py
-```
-
-Example:
-
-Input:
-```
-AI đang thay đổi cách con người học tập và làm việc hiệu quả hơn.
-```
-
-Target:
-```
-0.0 (Tiểu học)
-```
-
-Output:
-```
-Máy tính giúp con học và làm việc tốt hơn.
-```
-
----
-
-## 📊 Example Trace
-
-```json
-{
-  "iteration": 2,
-  "proposer": "AI đang giúp con người học và làm việc tốt hơn.",
-  "reviewer": {
-    "detected_level": 1.0,
-    "confidence": 0.63
-  }
-}
-```
-
----
-
-## 📁 Project Structure
-
-```
-agentic-readability-ai/
-│
-├── main.py
-├── analyst.py
-├── critic.py
-├── proposer.py
-├── reviewer.py
-├── utils.py
-├── llm.py
-├── phobert_singleton.py
-│
-├── README.md
-```
 
 
 ---
 
-## ⚠️ Limitations
+## 📖 Usage Guide
 
-- LLM may output invalid JSON → handled with fallback  
-- Hard to reach extreme levels perfectly (0.0 ↔ 2.0)  
-- Semantic constraint limits aggressive rewriting  
-
----
-
-## 🚀 Future Work
-
-- Deploy API (FastAPI)  
-- Build UI (Gradio / Hugging Face Space)  
-- Improve semantic similarity scoring  
-- Fine-tune proposer model  
+1. Input Stream: Paste your text into the "Source Text" area. Note the 256-token limit (enforced by PhoBERT's context window).
+2. Analyze: The system automatically detects the current level.
+3. Target Definition: Select your desired output level (Elementary, Junior High, or High School).
+4. Execution: Click EXECUTE ADAPTATION. The status bar will show the Agent's real-time thinking process.
+5. Review: Once successful, the result appears in the black output box. You can inspect the "System Logs" to see the reasoning behind each iteration.
 
 ---
 
-## 👨‍💻 Author
+## ⚠️ Technical Notes
 
-Built as an **Agentic AI system** combining:
-- LLM reasoning  
-- PhoBERT classification  
-- Iterative feedback loop  
+- Token Constraints: PhoBERT is optimized for a 256-token context. Input exceeding this will be flagged to prevent inaccurate classification.
+- Rate Limiting: To comply with Groq API's free tier limits, the system includes hardcoded time.sleep() intervals. Do not remove these to avoid 429 RateLimitErrors.
+- First Run: On the first execution, the system will download the phobert-readability-scale model (~600MB) from HuggingFace.
 
 ---
 
-## ⭐ If you find this useful
+## 🤝 Contribution
+This project is developed for research into Multi-Agent NLP applications for the Vietnamese language. Contributions to the Planning logic or Semantic Guardrail prompts are welcome.
 
-Give it a ⭐ on GitHub!
+---
+VRAP Core System | Developer Edition v1.0

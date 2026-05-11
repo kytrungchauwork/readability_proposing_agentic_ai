@@ -1,73 +1,66 @@
+import json
 from langchain_core.prompts import ChatPromptTemplate
 from utils import safe_json_loads
-import json
-
 
 class Proposer:
     def __init__(self, llm):
         self.llm = llm
 
-    def run(self, text, current_level, target_level, critique, direction):
-
-        # 🔥 CLEAN CRITIQUE (tránh phá prompt)
+    def run(self, text, current_level, target_level, critique, direction, plan, history):
+        # 🔥 CLEAN CRITIQUE & PLAN
         critique_str = json.dumps(critique, ensure_ascii=False)
+        plan_str = json.dumps(plan, ensure_ascii=False) if isinstance(plan, dict) else str(plan)
 
-        # 🔥 MAP DIRECTION → TEXT (LLM hiểu tốt hơn)
+        # 🔥 MAP DIRECTION → TEXT
         if direction < 0:
-            direction_rule = "Simplify aggressively (shorter sentence, simpler words, more concrete)"
+            direction_rule = "SIMPLIFY AGGRESSIVELY. Replace formal Hán-Việt words with common native Vietnamese words. Break down abstract concepts."
         elif direction > 0:
-            direction_rule = "Increase complexity (more abstract, more formal, longer structure)"
+            direction_rule = "INCREASE COMPLEXITY. Use more academic, formal, and Sino-Vietnamese terminology. Use longer, nested sentence structures."
         else:
             direction_rule = "Keep similar complexity"
 
         prompt = ChatPromptTemplate.from_template("""
-You are a readability transformation engine.
+You are an expert Vietnamese Readability Editor.
 
 TASK:
-Rewrite text from current level to target level.
+Rewrite the text to reach the EXACT target level.
 
-LEVELS:
-- 0.0 = TIỂU HỌC (very simple, short, concrete)
-- 1.0 = THCS (medium)
-- 2.0 = THPT (academic, abstract)
+LEVEL DEFINITIONS & EXAMPLES:
+- 0.0 (TIỂU HỌC): Very simple. Uses only common daily words. No abstract nouns.
+  *Example: "Máy tính thông minh giúp mọi người làm việc nhanh hơn."*
+- 1.0 (THCS): Medium difficulty. Familiar topics but uses some formal words. 
+  *Example: "Công nghệ mới đang làm thay đổi cách con người mua bán và làm việc trên thế giới."*
+- 2.0 (THPT): Academic/Formal. High density of Sino-Vietnamese (Hán-Việt) words. Complex structures.
+  *Example: "Hệ thống trí tuệ nhân tạo đang tác động sâu sắc đến cấu trúc kinh tế toàn cầu."*
 
-READABILITY SIGNALS (for guidance, not instruction):
-{critique}
+STRATEGY PLAN FROM PLANNER (MANDATORY):
+{plan}
 
-DIRECTION:
-{direction_rule}
+HISTORY OF ATTEMPTS (DO NOT REPEAT):
+{history}
 
-SEMANTIC CONSTRAINTS (VERY IMPORTANT):
-- MUST preserve original meaning
-- DO NOT change subject (e.g., AI must remain AI or equivalent)
-- DO NOT introduce new entities
-- DO NOT hallucinate
-- DO NOT remove key information
-- You can ONLY rewrite wording, NOT meaning
+DIRECTION: {direction_rule}
 
-BAD EXAMPLE:
-AI → trẻ em ❌
+SEMANTIC CONSTRAINTS:
+- Preserve original meaning.
+- DO NOT change the subject.
+- DO NOT hallucinate new info.
+- ONLY change wording and sentence structure.
 
-GOOD EXAMPLE:
-AI → trí tuệ nhân tạo ✅
-
-FORMAT RULES (STRICT):
-- Output MUST be valid JSON
-- DO NOT output code
-- DO NOT output markdown
-- DO NOT explain anything
-- ALL strings must be valid JSON (no unescaped quotes)
+FORMAT RULES:
+- Output ONLY valid JSON.
+- No markdown, no explanation.
 
 OUTPUT FORMAT:
 {{
   "rewrite": "string",
-  "changes": ["string", "string"]
+  "changes": ["list of specific word replacements made"]
 }}
 
 INPUT:
 Text: {text}
-Current: {current}
-Target: {target}
+Current Level: {current}
+Target Level: {target}
 """)
 
         chain = prompt | self.llm
@@ -77,7 +70,9 @@ Target: {target}
             "current": str(current_level),
             "target": str(target_level),
             "direction_rule": direction_rule,
-            "critique": critique_str
+            "critique": critique_str,
+            "plan": plan_str,
+            "history": history
         })
 
         # =========================
@@ -91,11 +86,10 @@ Target: {target}
                 "changes": ["fallback: invalid LLM output"]
             }
 
-        # 🔥 EXTRA GUARD: tránh rewrite rỗng
         if not data["rewrite"].strip():
             return {
                 "rewrite": text,
-                "changes": ["fallback: empty rewrite"]
+                "changes": ["fallback: empty rewrite result"]
             }
 
         return data
